@@ -4,3 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+enigo = "0.3.0"
+nokhwa = "0.10.7"
+numpy = "0.23.0"
+opencv = "0.94.1"
+pyo3 = "0.23.4"
+tensorflow = "0.21.0"
+
