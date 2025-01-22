@@ -1,4 +1,5 @@
-
+use enigo::{Enigo, KeyboardControllable, MouseControllable}; // For mouse/keyboard control
+use mediapipe_rs::{hands::HandLandmarker, tasks::vision::RunningMode}; // Hypothetical MediaPipe Rust binding
 use nokhwa::{Camera, CameraFormat, FrameFormat}; // For webcam capture
 use opencv::{
     core::{flip, Mat, Point, Scalar, Vector},
@@ -6,11 +7,8 @@ use opencv::{
     prelude::*,
     videoio,
 };
-use mediapipe_rs::{hands::HandLandmarker, tasks::vision::RunningMode}; // Hypothetical MediaPipe Rust binding
-use enigo::{Enigo, MouseControllable, KeyboardControllable}; // For mouse/keyboard control
-use tch::{nn, Device, Tensor}; // PyTorch bindings for Rust
 use std::error::Error;
-
+use tch::{nn, Device, Tensor}; // PyTorch bindings for Rust
 
 #[derive(Debug)]
 struct HandGestureController {
@@ -41,7 +39,7 @@ impl HandGestureController {
             model,
             enigo: Enigo::new(),
             status: -1,
-            last_distances: -1.0,
+            last_distance: -1.0,
             last_coord_x: 0,
             last_coord_y: 0,
             is_clicked: false,
@@ -86,9 +84,7 @@ impl HandGestureController {
             }
 
             // Model prediction
-            let input_tensor = Tensor::from_slice(&pose_array)
-                .view((-1, 3))
-                .unsqueeze(0);
+            let input_tensor = Tensor::from_slice(&pose_array).view((-1, 3)).unsqueeze(0);
             let prediction = self.model.forward_t(&input_tensor, false)?;
             let state = prediction.argmax(1, false).int64_value(&[0]) as i32;
             let confidence = prediction.double_value(&[0, state as i64]);
@@ -109,9 +105,9 @@ impl HandGestureController {
         let distance_ab = self.calculate_distances(point_a, point_b) / 10.0;
 
         if distance_ab < 8.0 && !self.is_clicked {
-            self.status = 1 //CLICKED_DOWN
+            self.status = 1; //CLICKED_DOWN
             let (screen_w, screen_h) = self.enigo.main_display_size();
-            self.enigo.move_mouse_to(screen_w/2, screen_h/2);
+            self.enigo.move_mouse_to(screen_w / 2, screen_h / 2);
             self.enigo.mouse_down(enigo::MouseButton::Right);
             self.enigo.key_down(enigo::Key::Control);
             self.last_coord_x = point_a.x;
@@ -129,16 +125,16 @@ impl HandGestureController {
         }
 
         //Handle Mouse Movement
-        if distance_ab < 15.0 && (self.last_coord_x - point_a.x).abs() > 5 && (self.last_coord_y - point_a.y).abs() > 5 {
+        if distance_ab < 15.0
+            && (self.last_coord_x - point_a.x).abs() > 5
+            && (self.last_coord_y - point_a.y).abs() > 5
+        {
             let dx = point_a.x - self.last_coord_x;
             let dy = point_a.y - self.last_coord_y;
 
             if self.status == 1 {
                 let (mouse_x, mouse_y) = self.enigo.mouse_location();
-                self.enigo.move_mouse_to(
-                    mouse_x + dx,
-                    mouse_y + dy,
-                );
+                self.enigo.move_mouse_to(mouse_x + dx, mouse_y + dy);
             }
 
             self.last_coord_x = point_a.x;
@@ -148,14 +144,19 @@ impl HandGestureController {
         Ok(())
     }
 
-    fn handle_state_one(&mut self, point_a: Point, point_b: Point, point_c: Point) -> Result<(), Box<dyn Error>> {
+    fn handle_state_one(
+        &mut self,
+        point_a: Point,
+        point_b: Point,
+        point_c: Point,
+    ) -> Result<(), Box<dyn Error>> {
         let distance_ab = self.calculate_distances(point_a, point_b);
         let distance_bc = self.calculate_distances(point_b, point_c);
         let distance_ca = self.calculate_distances(point_c, point_a);
 
         let total_distance = distance_ab + distance_bs + distance_ca;
         let total_distance_normalized = total_distances / 10.0;
-        
+
         if self.last_distance == -1.0 {
             self.last_distance = total_distance_normalized;
         }
