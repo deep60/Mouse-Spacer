@@ -7,7 +7,7 @@ edition = "2021"
 enigo = "0.3.0"
 nokhwa = "0.10.7"
 numpy = "0.23.0"
-opencv = "0.94.1"
+opencv = {version = "0.94.1", features = ["buildtime-bindgen"] }
 pyo3 = "0.23.4"
 tch = "0.18.1"
 
